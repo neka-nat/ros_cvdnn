@@ -1,0 +1,11 @@
+<launch>
+  <arg name="input_topic_name" default="image_in" />
+  <node name="cvdnn_classification" pkg="cvdnn_classification" type="cvdnn_classification_node" >
+    <param name="model_path" value="$(find cvdnn_classification)/models/bvlc_googlenet.caffemodel"/>
+    <param name="config_path" value="$(find cvdnn_classification)/models/bvlc_googlenet.prototxt"/>
+    <param name="input_topic_name" value="$(arg input_topic_name)"/>
+    <param name="input_width" value="224"/>
+    <param name="input_height" value="224"/>
+    <param name="class_names" value="$(find cvdnn_classification)/models/synset_words.txt"/>
+  </node>
+</launch>

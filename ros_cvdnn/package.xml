@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<package>
+  <name>ros_cvdnn</name>
+  <version>0.1.0</version>
+  <description>ROS nodes for OpenCV DNN</description>
+  <maintainer email="nekanat.stock@gmail.com">neka-nat</maintainer>
+  <license>BSD</license>
+</package>
