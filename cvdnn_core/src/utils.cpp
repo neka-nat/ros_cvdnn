@@ -32,8 +32,6 @@ cv::Mat Forward(cv::dnn::Net& net,
                 const cv::Scalar& mean,
                 bool swapRB) {
     cv::Mat blob;
-    const int inpWidth = frame.cols;
-    const int inpHeight = frame.rows;
     cv::dnn::blobFromImage(frame, blob, scale, size, mean, swapRB, false);
     net.setInput(blob);
     return net.forward();
