@@ -3,24 +3,24 @@
 namespace cvdnn {
 
 bool GetNetParams(ros::NodeHandle& nh, NetParams& netParams) {
-    if (!nh.getParam("model_path", netParams.model_)) {
+    if (!nh.getParam("model_path", netParams.mModel)) {
         return false;
     }
-    nh.param<std::string>("config_path", netParams.config_, "");
-    nh.param<std::string>("framework", netParams.framework_, "caffe");
-    nh.param<int>("backend_id", netParams.backend_id_, cv::dnn::DNN_BACKEND_DEFAULT);
-    nh.param<int>("target_id", netParams.target_id_, cv::dnn::DNN_TARGET_CPU);
+    nh.param<std::string>("config_path", netParams.mConfig, "");
+    nh.param<std::string>("framework", netParams.mFramework, "caffe");
+    nh.param<int>("backend_id", netParams.mBackendId, cv::dnn::DNN_BACKEND_DEFAULT);
+    nh.param<int>("target_id", netParams.mTargetId, cv::dnn::DNN_TARGET_CPU);
     return true;
 }
 
 bool ReadNet(cv::dnn::Net& net,
              const NetParams& netParams) {
-    if (netParams.model_.empty()) {
+    if (netParams.mModel.empty()) {
         return false;
     }
-    net = cv::dnn::readNet(netParams.model_, netParams.config_, netParams.framework_);
-    net.setPreferableBackend(netParams.backend_id_);
-    net.setPreferableTarget(netParams.target_id_);
+    net = cv::dnn::readNet(netParams.mModel, netParams.mConfig, netParams.mFramework);
+    net.setPreferableBackend(netParams.mBackendId);
+    net.setPreferableTarget(netParams.mTargetId);
     return true;
 }
 

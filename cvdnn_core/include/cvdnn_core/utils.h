@@ -11,13 +11,13 @@ struct NetParams {
               const std::string& framework = "caffe",
               int backendId = cv::dnn::DNN_BACKEND_DEFAULT,
               int targetId = cv::dnn::DNN_TARGET_CPU)
-    : model_(model), config_(config), framework_(framework),
-    backend_id_(backendId), target_id_(targetId) {};
-    std::string model_;
-    std::string config_;
-    std::string framework_;
-    int backend_id_;
-    int target_id_;
+    : mModel(model), mConfig(config), mFramework(framework),
+    mBackendId(backendId), mTargetId(targetId) {};
+    std::string mModel;
+    std::string mConfig;
+    std::string mFramework;
+    int mBackendId;
+    int mTargetId;
 };
 
 bool GetNetParams(ros::NodeHandle& nh, NetParams& netParams);
