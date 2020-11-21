@@ -26,9 +26,10 @@ class ImageProcessor {
 public:
     ImageProcessor(ros::NodeHandle& nh, cv::dnn::Net& net,
                    const std::string& inputName,
+                   double scale,
                    const cv::Size& size,
                    const std::string& classNameTxt = "")
-    : mNet(net), mNh(nh), mIt(nh), mSize(size) {
+    : mNet(net), mNh(nh), mIt(nh), mScale(scale), mSize(size) {
         mSub = mIt.subscribe(inputName, 5, &ImageProcessor::ImageCallback, this);
         mPub = mNh.advertise<vision_msgs::Detection2DArray>("detections", 5);
         mPubOvl = mNh.advertise<sensor_msgs::Image>("overlay", 2);
@@ -46,7 +47,7 @@ public:
             ROS_ERROR("cv_bridge exception: %s", e.what());
             return;
         }
-        cv::Mat detectionMat = Forward(mNet, frame, 1 / 255.0, mSize, cv::Scalar());
+        cv::Mat detectionMat = Forward(mNet, frame, mScale, mSize, cv::Scalar());
 
         vision_msgs::Detection2DArray msg;
         std::ostringstream ss;
@@ -159,6 +160,7 @@ private:
     image_transport::Subscriber mSub;
     ros::Publisher mPub;
     ros::Publisher mPubOvl;
+    double mScale;
     cv::Size mSize;
     std::vector<std::string> mClassNames;
     double mConfidenceThreshold;
@@ -187,12 +189,15 @@ int main(int argc, char** argv) {
     privateNh.param<std::string>("input_topic_name", inputName, "image_in");
     std::string classNameTxt;
     privateNh.param<std::string>("class_names", classNameTxt, "");
+    double scale;
+    privateNh.param<double>("input_scale", scale, 1.0);
     int inputWidth;
     int inputHeight;
     privateNh.param<int>("input_width", inputWidth, 416);
     privateNh.param<int>("input_height", inputHeight, 416);
 
-    ImageProcessor ip(nh, net, inputName, cv::Size(inputWidth, inputHeight), classNameTxt);
+
+    ImageProcessor ip(nh, net, inputName, scale, cv::Size(inputWidth, inputHeight), classNameTxt);
     ros::Rate rate(frq);
     while (ros::ok()) {
         ros::spinOnce();

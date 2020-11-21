@@ -5,6 +5,7 @@
     <param name="config_path" value="$(find cvdnn_object_detection)/models/yolov3.cfg"/>
     <param name="framework" value="darknet"/>
     <param name="input_topic_name" value="$(arg input_topic_name)"/>
+    <param name="input_scale" value="$(eval 1.0 / 255.0)"/>
     <param name="input_width" value="416"/>
     <param name="input_height" value="416"/>
     <param name="class_names" value="$(find cvdnn_object_detection)/models/coco.names"/>
