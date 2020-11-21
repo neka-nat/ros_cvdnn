@@ -28,8 +28,9 @@ public:
                    const std::string& inputName,
                    double scale,
                    const cv::Size& size,
-                   const std::string& classNameTxt = "")
-    : mNet(net), mNh(nh), mIt(nh), mScale(scale), mSize(size) {
+                   const std::string& classNameTxt = "",
+                   double confidenceThreshold = 0.2)
+    : mNet(net), mNh(nh), mIt(nh), mScale(scale), mSize(size), mConfidenceThreshold(confidenceThreshold) {
         mSub = mIt.subscribe(inputName, 5, &ImageProcessor::ImageCallback, this);
         mPub = mNh.advertise<vision_msgs::Detection2DArray>("detections", 5);
         mPubOvl = mNh.advertise<sensor_msgs::Image>("overlay", 2);
