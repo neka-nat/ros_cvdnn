@@ -24,8 +24,8 @@ catkin_package(
 
 if (NOT EXISTS "${CMAKE_SOURCE_DIR}/models/yolov3-tiny.weights")
   file(DOWNLOAD
-       https://pjreddie.com/media/files/yolov3-tiny.weights
-       ${CMAKE_SOURCE_DIR}/models/yolov3-tiny.weights
+       https://pjreddie.com/media/files/yolov3.weights
+       ${CMAKE_SOURCE_DIR}/models/yolov3.weights
        SHOW_PROGRESS)
 endif()
 

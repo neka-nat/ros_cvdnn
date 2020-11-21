@@ -1,10 +1,10 @@
 <launch>
   <arg name="input_topic_name" default="image_in" />
   <node name="cvdnn_object_detection" pkg="cvdnn_object_detection" type="cvdnn_object_detection_node" >
-    <param name="model_path" value="$(find cvdnn_object_detection)/models/yolov3-tiny.weights"/>
-    <param name="config_path" value="$(find cvdnn_object_detection)/models/yolov3-tiny.cfg"/>
-    <param name="config_path" value="$(find cvdnn_object_detection)/models/yolov3-tiny.cfg"/>
+    <param name="model_path" value="$(find cvdnn_object_detection)/models/yolov3.weights"/>
+    <param name="config_path" value="$(find cvdnn_object_detection)/models/yolov3.cfg"/>
     <param name="framework" value="darknet"/>
+    <param name="input_topic_name" value="$(arg input_topic_name)"/>
     <param name="input_width" value="416"/>
     <param name="input_height" value="416"/>
     <param name="class_names" value="$(find cvdnn_object_detection)/models/coco.names"/>

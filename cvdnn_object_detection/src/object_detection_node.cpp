@@ -33,6 +33,8 @@ public:
         mPub = mNh.advertise<vision_msgs::Detection2DArray>("detections", 5);
         mPubOvl = mNh.advertise<sensor_msgs::Image>("overlay", 2);
         if (!classNameTxt.empty()) mClassNames = readClassNames(classNameTxt);
+        std::vector<int> outLayers = mNet.getUnconnectedOutLayers();
+        mOutLayerType = mNet.getLayer(outLayers[0])->type;
     }
 
     void ImageCallback(const sensor_msgs::ImageConstPtr& data) {
@@ -48,48 +50,100 @@ public:
 
         vision_msgs::Detection2DArray msg;
         std::ostringstream ss;
-        for (int i = 0; i < detectionMat.rows; i++) {
-            const int probability_index = 5;
-            const int probability_size = detectionMat.cols - probability_index;
-            float *prob_array_ptr = &detectionMat.at<float>(i, probability_index);
-            size_t objectClass = std::max_element(prob_array_ptr, prob_array_ptr + probability_size) - prob_array_ptr;
-            float confidence = detectionMat.at<float>(i, (int)objectClass + probability_index);
-            if (confidence > mConfidenceThreshold)
+        if (mOutLayerType == "DetectionOutput") {
+            float* data = (float*)detectionMat.data;
+            for (size_t i = 0; i < detectionMat.total(); i += 7)
             {
-                float x = detectionMat.at<float>(i, 0);
-                float y = detectionMat.at<float>(i, 1);
-                float width = detectionMat.at<float>(i, 2);
-                float height = detectionMat.at<float>(i, 3);
-                int xLeftBottom = static_cast<int>((x - width / 2) * frame.cols);
-                int yLeftBottom = static_cast<int>((y - height / 2) * frame.rows);
-                int xRightTop = static_cast<int>((x + width / 2) * frame.cols);
-                int yRightTop = static_cast<int>((y + height / 2) * frame.rows);
-                vision_msgs::Detection2D detMsg;
-                detMsg.bbox.size_x = width;
-                detMsg.bbox.size_y = height;
-                detMsg.bbox.center.x = x;
-                detMsg.bbox.center.y = y;
-                detMsg.bbox.center.theta = 0.0;
-                vision_msgs::ObjectHypothesisWithPose hyp;
-                hyp.id = objectClass;
-                hyp.score = confidence;
-                msg.detections.push_back(detMsg);
-                cv::Rect object(xLeftBottom, yLeftBottom,
-                                xRightTop - xLeftBottom,
-                                yRightTop - yLeftBottom);
-                cv::rectangle(frame, object, cv::Scalar(0, 255, 0));
-                if (objectClass < mClassNames.size()) {
-                    ss.str("");
-                    ss << confidence;
-                    std::string conf(ss.str());
-                    std::string label = std::string(mClassNames[objectClass]) + ": " + conf;
-                    int baseLine = 0;
-                    cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
-                    cv::rectangle(frame, cv::Rect(cv::Point(xLeftBottom, yLeftBottom ),
-                                         cv::Size(labelSize.width, labelSize.height + baseLine)),
-                                 cv::Scalar(255, 255, 255), cv::FILLED);
-                    cv::putText(frame, label, cv::Point(xLeftBottom, yLeftBottom + labelSize.height),
-                                cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+                float confidence = data[i + 2];
+                if (confidence > mConfidenceThreshold)
+                {
+                    int left   = (int)data[i + 3];
+                    int top    = (int)data[i + 4];
+                    int right  = (int)data[i + 5];
+                    int bottom = (int)data[i + 6];
+                    int width  = right - left + 1;
+                    int height = bottom - top + 1;
+                    if (width <= 2 || height <= 2) {
+                        left   = (int)(data[i + 3] * frame.cols);
+                        top    = (int)(data[i + 4] * frame.rows);
+                        right  = (int)(data[i + 5] * frame.cols);
+                        bottom = (int)(data[i + 6] * frame.rows);
+                        width  = right - left + 1;
+                        height = bottom - top + 1;
+                    }
+                    size_t objectClass = (int)(data[i + 1]) - 1;  // Skip 0th background class id.
+                    vision_msgs::Detection2D detMsg;
+                    detMsg.bbox.size_x = width;
+                    detMsg.bbox.size_y = height;
+                    detMsg.bbox.center.x = (left + right) / 2;
+                    detMsg.bbox.center.y = (top + bottom) / 2;
+                    detMsg.bbox.center.theta = 0.0;
+                    vision_msgs::ObjectHypothesisWithPose hyp;
+                    hyp.id = objectClass;
+                    hyp.score = confidence;
+                    msg.detections.push_back(detMsg);
+                    cv::Rect object(left, bottom,
+                                    width, height);
+                    cv::rectangle(frame, object, cv::Scalar(0, 255, 0));
+                    if (objectClass < mClassNames.size()) {
+                        ss.str("");
+                        ss << confidence;
+                        std::string conf(ss.str());
+                        std::string label = std::string(mClassNames[objectClass]) + ": " + conf;
+                        int baseLine = 0;
+                        cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
+                        cv::rectangle(frame, cv::Rect(cv::Point(left, bottom),
+                                             cv::Size(labelSize.width, labelSize.height + baseLine)),
+                                     cv::Scalar(255, 255, 255), cv::FILLED);
+                        cv::putText(frame, label, cv::Point(left, bottom + labelSize.height),
+                                    cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+                    }
+                }
+            }
+        } else if (mOutLayerType == "Region") {
+            for (int i = 0; i < detectionMat.rows; i++) {
+                const int probability_index = 5;
+                const int probability_size = detectionMat.cols - probability_index;
+                float *prob_array_ptr = &detectionMat.at<float>(i, probability_index);
+                size_t objectClass = std::max_element(prob_array_ptr, prob_array_ptr + probability_size) - prob_array_ptr;
+                float confidence = detectionMat.at<float>(i, (int)objectClass + probability_index);
+                if (confidence > mConfidenceThreshold)
+                {
+                    float x = detectionMat.at<float>(i, 0);
+                    float y = detectionMat.at<float>(i, 1);
+                    float width = detectionMat.at<float>(i, 2);
+                    float height = detectionMat.at<float>(i, 3);
+                    int xLeftBottom = static_cast<int>((x - width / 2) * frame.cols);
+                    int yLeftBottom = static_cast<int>((y - height / 2) * frame.rows);
+                    int xRightTop = static_cast<int>((x + width / 2) * frame.cols);
+                    int yRightTop = static_cast<int>((y + height / 2) * frame.rows);
+                    vision_msgs::Detection2D detMsg;
+                    detMsg.bbox.size_x = width * frame.cols;
+                    detMsg.bbox.size_y = height * frame.rows;
+                    detMsg.bbox.center.x = x * frame.cols;
+                    detMsg.bbox.center.y = y * frame.rows;
+                    detMsg.bbox.center.theta = 0.0;
+                    vision_msgs::ObjectHypothesisWithPose hyp;
+                    hyp.id = objectClass;
+                    hyp.score = confidence;
+                    msg.detections.push_back(detMsg);
+                    cv::Rect object(xLeftBottom, yLeftBottom,
+                                    xRightTop - xLeftBottom,
+                                    yRightTop - yLeftBottom);
+                    cv::rectangle(frame, object, cv::Scalar(0, 255, 0));
+                    if (objectClass < mClassNames.size()) {
+                        ss.str("");
+                        ss << confidence;
+                        std::string conf(ss.str());
+                        std::string label = std::string(mClassNames[objectClass]) + ": " + conf;
+                        int baseLine = 0;
+                        cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseLine);
+                        cv::rectangle(frame, cv::Rect(cv::Point(xLeftBottom, yLeftBottom),
+                                             cv::Size(labelSize.width, labelSize.height + baseLine)),
+                                     cv::Scalar(255, 255, 255), cv::FILLED);
+                        cv::putText(frame, label, cv::Point(xLeftBottom, yLeftBottom + labelSize.height),
+                                    cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 0));
+                    }
                 }
             }
         }
@@ -108,6 +162,7 @@ private:
     cv::Size mSize;
     std::vector<std::string> mClassNames;
     double mConfidenceThreshold;
+    std::string mOutLayerType;
 };
 
 }
